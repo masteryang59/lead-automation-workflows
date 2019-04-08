@@ -1,0 +1,18 @@
+{
+  "name": "lead-automation-workflows",
+  "version": "1.0.0",
+  "description": "n8n and Make workflows for form → enrich → CRM → Slack, with local mock services to run them against.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "mocks": "node --env-file-if-exists=.env mock-services/server.js",
+    "send-leads": "node --env-file-if-exists=.env scripts/send-sample-leads.js",
+    "sync:n8n": "node scripts/sync-n8n-code.js",
+    "test": "node --test --test-reporter=spec \"test/*.test.js\"",
+    "test:e2e": "node --env-file-if-exists=.env --test --test-reporter=spec test/e2e/n8n-live.test.js",
+    "configure:make": "node --env-file-if-exists=.env scripts/configure-make-blueprint.js"
+  }
+}
