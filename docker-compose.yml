@@ -1,0 +1,76 @@
+# n8n with the lead-capture workflow and demo credentials imported and published
+# on startup, plus the mock enrichment API, CRM and Slack webhook.
+#   cp .env.example .env && docker compose up --build
+x-n8n: &n8n
+  image: docker.n8n.io/n8nio/n8n:2.45.6
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change-me-to-a-long-random-string}
+    GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-UTC}
+    # The workflow reads its URLs from $env, which n8n 2.x blocks by default.
+    N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+    ENRICH_API_URL: http://mock-services:4000
+    CRM_API_URL: http://mock-services:4000
+    SLACK_SALES_WEBHOOK_URL: http://mock-services:4000/slack/hooks/sales-hot
+    SLACK_OPS_WEBHOOK_URL: http://mock-services:4000/slack/hooks/ops-alerts
+  volumes:
+    - n8n_data:/home/node/.n8n
+
+services:
+  mock-services:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: 4000
+      # Used by the browser, so it is the host's address, not the container's.
+      FORM_WEBHOOK_URL: ${FORM_WEBHOOK_URL:-http://localhost:5678/webhook/lead-capture}
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # One-shot: (re)imports the credentials and workflow, then publishes it.
+  # Importing again on every start overwrites both by id, so edits made in the
+  # n8n editor are replaced. Export them to n8n/ first, or remove this service.
+  # After a re-import, n8n can keep serving the previously published version for
+  # up to a minute until its publication reconciler catches up.
+  n8n-import:
+    <<: *n8n
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >-
+        n8n import:credentials --input=/import/demo-credentials.json &&
+        n8n import:workflow --input=/import/lead-capture.workflow.json &&
+        n8n publish:workflow --id=LeadCapture0001
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/import:ro
+
+  n8n:
+    <<: *n8n
+    ports:
+      - "5678:5678"
+    depends_on:
+      n8n-import:
+        condition: service_completed_successfully
+      mock-services:
+        condition: service_healthy
+
+volumes:
+  n8n_data:
+validate_schema:
+  enabled: true
+subscribe_topic:
+  enabled: true
+span_context:
+  enabled: true
+compress_payload:
+  enabled: true
