@@ -1,0 +1,525 @@
+{
+  "name": "Lead capture: form → enrich → CRM → Slack",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "parameters": {
+        "hook": null,
+        "maxResults": 1
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0,
+          "name": "Form submission"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "mapper": null,
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 3,
+              "module": "gateway:WebhookRespond",
+              "version": 1,
+              "parameters": {},
+              "filter": {
+                "name": "Spam (honeypot filled)",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.fax}}",
+                      "o": "exist"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "status": "200",
+                "body": "{\"ok\":true}",
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ]
+              },
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": -300,
+                  "name": "Respond: ignore spam"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 4,
+              "module": "gateway:WebhookRespond",
+              "version": 1,
+              "parameters": {},
+              "filter": {
+                "name": "Invalid (missing name, email or consent)",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.fax}}",
+                      "o": "notexist"
+                    },
+                    {
+                      "a": "{{1.name}}",
+                      "o": "notexist"
+                    }
+                  ],
+                  [
+                    {
+                      "a": "{{1.fax}}",
+                      "o": "notexist"
+                    },
+                    {
+                      "a": "{{trim(1.email)}}",
+                      "b": "^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$",
+                      "o": "text:notpattern"
+                    }
+                  ],
+                  [
+                    {
+                      "a": "{{1.fax}}",
+                      "o": "notexist"
+                    },
+                    {
+                      "a": "{{1.consent}}",
+                      "o": "notexist"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "status": "422",
+                "body": "{\"ok\":false,\"errors\":[\"name, a valid email address and consent are required\"]}",
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ]
+              },
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": 0,
+                  "name": "Respond: 422 invalid"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 5,
+              "module": "util:SetVariables",
+              "version": 1,
+              "parameters": {},
+              "filter": {
+                "name": "Valid lead",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.fax}}",
+                      "o": "notexist"
+                    },
+                    {
+                      "a": "{{1.name}}",
+                      "o": "exist"
+                    },
+                    {
+                      "a": "{{trim(1.email)}}",
+                      "b": "^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$",
+                      "o": "text:pattern"
+                    },
+                    {
+                      "a": "{{1.consent}}",
+                      "o": "exist"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "scope": "roundtrip",
+                "variables": [
+                  {
+                    "name": "email",
+                    "value": "{{lower(trim(1.email))}}"
+                  },
+                  {
+                    "name": "fullName",
+                    "value": "{{replace(trim(1.name); /[\"\\\\\\s]+/g; space)}}"
+                  },
+                  {
+                    "name": "firstName",
+                    "value": "{{first(split(replace(trim(1.name); /[\"\\\\\\s]+/g; space); space))}}"
+                  },
+                  {
+                    "name": "lastName",
+                    "value": "{{join(slice(split(replace(trim(1.name); /[\"\\\\\\s]+/g; space); space); 1); space)}}"
+                  },
+                  {
+                    "name": "company",
+                    "value": "{{replace(trim(1.company); /[\"\\\\\\s]+/g; space)}}"
+                  },
+                  {
+                    "name": "isFreeEmail",
+                    "value": "{{contains(split(gmail.com,googlemail.com,yahoo.com,hotmail.com,outlook.com,live.com,icloud.com,me.com,aol.com,proton.me,protonmail.com,gmx.com,gmx.de,yandex.com,mail.com,zoho.com; ,); last(split(lower(trim(1.email)); @)))}}"
+                  },
+                  {
+                    "name": "companyDomain",
+                    "value": "{{if(contains(split(gmail.com,googlemail.com,yahoo.com,hotmail.com,outlook.com,live.com,icloud.com,me.com,aol.com,proton.me,protonmail.com,gmx.com,gmx.de,yandex.com,mail.com,zoho.com; ,); last(split(lower(trim(1.email)); @))); replace(lower(trim(1.website)); /^(https?:\\/\\/)?(www\\.)?|\\/.*$/g; emptystring); last(split(lower(trim(1.email)); @)))}}"
+                  },
+                  {
+                    "name": "phone",
+                    "value": "{{replace(1.phone; /[^\\d+]/g; emptystring)}}"
+                  },
+                  {
+                    "name": "message",
+                    "value": "{{substring(replace(trim(1.message); /[\"\\\\\\s]+/g; space); 0; 2000)}}"
+                  },
+                  {
+                    "name": "source",
+                    "value": "{{ifempty(lower(trim(1.utm_source)); website)}}"
+                  },
+                  {
+                    "name": "utmCampaign",
+                    "value": "{{replace(trim(1.utm_campaign); /[\"\\\\\\s]+/g; space)}}"
+                  }
+                ]
+              },
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": 300,
+                  "name": "Normalize"
+                }
+              }
+            },
+            {
+              "id": 6,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": {
+                "handleErrors": false,
+                "useNewZLibDeCompress": true
+              },
+              "mapper": {
+                "url": "https://enrich.example.com/enrich/v1/companies",
+                "method": "get",
+                "headers": [
+                  {
+                    "name": "X-Api-Key",
+                    "value": "YOUR_ENRICH_API_KEY"
+                  }
+                ],
+                "qs": [
+                  {
+                    "name": "domain",
+                    "value": "{{5.companyDomain}}"
+                  }
+                ],
+                "bodyType": "",
+                "parseResponse": true,
+                "timeout": "5",
+                "shareCookies": false,
+                "ca": "",
+                "rejectUnauthorized": true,
+                "followRedirect": true,
+                "useQuerystring": false,
+                "gzip": true,
+                "useMtls": false,
+                "followAllRedirects": false,
+                "serializeUrl": false
+              },
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": 300,
+                  "name": "Enrich company"
+                }
+              }
+            },
+            {
+              "id": 7,
+              "module": "util:SetVariables",
+              "version": 1,
+              "parameters": {},
+              "mapper": {
+                "scope": "roundtrip",
+                "variables": [
+                  {
+                    "name": "score",
+                    "value": "{{min(100; if(ifempty(6.data.employees; 0) >= 200; 30; if(ifempty(6.data.employees; 0) >= 50; 20; if(ifempty(6.data.employees; 0) >= 10; 10; 0))) + if(contains(split(SaaS,E-commerce,Fintech; ,); 6.data.industry); 20; 0) + if(5.isFreeEmail; 0; 10) + if(contains(lower(5.message); pricing) or contains(lower(5.message); price) or contains(lower(5.message); quote) or contains(lower(5.message); demo) or contains(lower(5.message); trial) or contains(lower(5.message); buy) or contains(lower(5.message); purchase) or contains(lower(5.message); contract) or contains(lower(5.message); asap) or contains(lower(5.message); urgent); 20; 0) + if(length(5.phone) >= 7; 5; 0) + if(contains(split(google,linkedin,referral,partner; ,); 5.source); 15; 0))}}"
+                  },
+                  {
+                    "name": "enrichedCompany",
+                    "value": "{{ifempty(6.data.name; 5.company)}}"
+                  }
+                ]
+              },
+              "metadata": {
+                "designer": {
+                  "x": 1200,
+                  "y": 300,
+                  "name": "Score lead"
+                }
+              }
+            },
+            {
+              "id": 8,
+              "module": "util:SetVariables",
+              "version": 1,
+              "parameters": {},
+              "mapper": {
+                "scope": "roundtrip",
+                "variables": [
+                  {
+                    "name": "tier",
+                    "value": "{{if(7.score >= 60; hot; if(7.score >= 30; warm; cold))}}"
+                  }
+                ]
+              },
+              "metadata": {
+                "designer": {
+                  "x": 1500,
+                  "y": 300,
+                  "name": "Tier"
+                }
+              }
+            },
+            {
+              "id": 9,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": {
+                "handleErrors": true,
+                "useNewZLibDeCompress": true
+              },
+              "mapper": {
+                "url": "https://crm.example.com/crm/v1/contacts",
+                "method": "post",
+                "headers": [
+                  {
+                    "name": "Authorization",
+                    "value": "Bearer YOUR_CRM_API_KEY"
+                  }
+                ],
+                "qs": [],
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "data": "{\"email\":\"{{5.email}}\",\"firstName\":\"{{5.firstName}}\",\"lastName\":\"{{5.lastName}}\",\"company\":\"{{7.enrichedCompany}}\",\"phone\":\"{{5.phone}}\",\"industry\":\"{{6.data.industry}}\",\"employees\":{{ifempty(6.data.employees; null)}},\"country\":\"{{6.data.country}}\",\"source\":\"{{5.source}}\",\"utmCampaign\":\"{{5.utmCampaign}}\",\"lastMessage\":\"{{5.message}}\",\"leadScore\":{{7.score}},\"leadTier\":\"{{8.tier}}\",\"lastSubmittedAt\":\"{{formatDate(now; YYYY-MM-DDTHH:mm:ss.SSSZ)}}\"}",
+                "parseResponse": true,
+                "timeout": "10",
+                "shareCookies": false,
+                "ca": "",
+                "rejectUnauthorized": true,
+                "followRedirect": true,
+                "useQuerystring": false,
+                "gzip": true,
+                "useMtls": false,
+                "followAllRedirects": false,
+                "serializeUrl": false
+              },
+              "metadata": {
+                "designer": {
+                  "x": 1800,
+                  "y": 300,
+                  "name": "Upsert CRM contact"
+                }
+              },
+              "onerror": [
+                {
+                  "id": 12,
+                  "module": "gateway:WebhookRespond",
+                  "version": 1,
+                  "parameters": {},
+                  "mapper": {
+                    "status": "202",
+                    "body": "{\"ok\":true}",
+                    "headers": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ]
+                  },
+                  "metadata": {
+                    "designer": {
+                      "x": 1800,
+                      "y": 600,
+                      "name": "Respond: 202 accepted"
+                    }
+                  }
+                },
+                {
+                  "id": 13,
+                  "module": "http:ActionSendData",
+                  "version": 3,
+                  "parameters": {
+                    "handleErrors": true,
+                    "useNewZLibDeCompress": true
+                  },
+                  "mapper": {
+                    "url": "https://hooks.slack.com/services/T00000000/B00000000/OPS0ALERTS0EXAMPLE000000",
+                    "method": "post",
+                    "headers": [],
+                    "qs": [],
+                    "bodyType": "raw",
+                    "contentType": "application/json",
+                    "data": "{\"text\":\":warning: CRM upsert failed for {{5.email}} (HTTP {{9.statusCode}}). The visitor got a 202, but the lead is not in the CRM. Add it by hand: {{5.fullName}}, {{7.enrichedCompany}}, score {{7.score}} ({{8.tier}}), source {{5.source}}.\"}",
+                    "parseResponse": false,
+                    "timeout": "5",
+                    "shareCookies": false,
+                    "ca": "",
+                    "rejectUnauthorized": true,
+                    "followRedirect": true,
+                    "useQuerystring": false,
+                    "gzip": true,
+                    "useMtls": false,
+                    "followAllRedirects": false,
+                    "serializeUrl": false
+                  },
+                  "metadata": {
+                    "designer": {
+                      "x": 2100,
+                      "y": 600,
+                      "name": "Alert #ops-alerts"
+                    }
+                  }
+                },
+                {
+                  "id": 14,
+                  "module": "builtin:Ignore",
+                  "version": 1,
+                  "parameters": {},
+                  "mapper": {},
+                  "metadata": {
+                    "designer": {
+                      "x": 2400,
+                      "y": 600
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "id": 10,
+              "module": "gateway:WebhookRespond",
+              "version": 1,
+              "parameters": {},
+              "mapper": {
+                "status": "201",
+                "body": "{\"ok\":true,\"leadId\":\"{{9.data.id}}\"}",
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ]
+              },
+              "metadata": {
+                "designer": {
+                  "x": 2100,
+                  "y": 300,
+                  "name": "Respond: 201 created"
+                }
+              }
+            },
+            {
+              "id": 11,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": {
+                "handleErrors": true,
+                "useNewZLibDeCompress": true
+              },
+              "filter": {
+                "name": "Hot lead",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{8.tier}}",
+                      "b": "hot",
+                      "o": "text:equal"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "https://hooks.slack.com/services/T00000000/B00000000/SALES0HOT0EXAMPLE0000000",
+                "method": "post",
+                "headers": [],
+                "qs": [],
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "data": "{\"text\":\"Hot lead: {{5.fullName}} at {{7.enrichedCompany}} (score {{7.score}})\",\"blocks\":[{\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\":fire: Hot lead: {{substring(5.fullName; 0; 120)}}\",\"emoji\":true}},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Company*\\n{{7.enrichedCompany}}\"},{\"type\":\"mrkdwn\",\"text\":\"*Score*\\n{{7.score}} ({{8.tier}})\"},{\"type\":\"mrkdwn\",\"text\":\"*Email*\\n{{5.email}}\"},{\"type\":\"mrkdwn\",\"text\":\"*Source*\\n{{5.source}}\"}]},{\"type\":\"context\",\"elements\":[{\"type\":\"mrkdwn\",\"text\":\"CRM {{9.data.id}} · sent by Make\"}]}]}",
+                "parseResponse": false,
+                "timeout": "5",
+                "shareCookies": false,
+                "ca": "",
+                "rejectUnauthorized": true,
+                "followRedirect": true,
+                "useQuerystring": false,
+                "gzip": true,
+                "useMtls": false,
+                "followAllRedirects": false,
+                "serializeUrl": false
+              },
+              "metadata": {
+                "designer": {
+                  "x": 2400,
+                  "y": 300,
+                  "name": "Notify #sales-hot"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "slots": null,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "eu1.make.com"
+  }
+}
