@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Talk to sales · Relaydesk</title>
+  <style>
+    :root { --ink: #16202c; --muted: #5d6b7a; --line: #d9e0e7; --brand: #2f5fd0; --bg: #f5f7fa; --ok: #1f7a4d; --bad: #b42318; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+    main { max-width: 980px; margin: 0 auto; padding: 48px 16px; display: grid; grid-template-columns: 1fr 1.1fr; gap: 48px; }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; gap: 24px; padding-top: 24px; } }
+    .brand { font-weight: 700; color: var(--brand); letter-spacing: .02em; }
+    h1 { font-size: 32px; line-height: 1.15; margin: 12px 0; }
+    .pitch p { color: var(--muted); }
+    form { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 24px; display: grid; gap: 14px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+    label { display: grid; gap: 4px; font-weight: 600; font-size: 13px; }
+    label span { font-weight: 400; color: var(--muted); }
+    input, textarea, select { font: inherit; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; width: 100%; }
+    input:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--brand) 35%, transparent); border-color: var(--brand); }
+    textarea { min-height: 96px; resize: vertical; }
+    .check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; font-size: 14px; }
+    .check input { width: auto; margin-top: 4px; }
+    .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+    button { font: inherit; font-weight: 600; background: var(--brand); color: #fff; border: 0; border-radius: 8px; padding: 11px; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    .result { font-size: 14px; padding: 10px 12px; border-radius: 8px; display: none; white-space: pre-wrap; }
+    .result.ok { display: block; background: #e8f5ee; color: var(--ok); }
+    .result.bad { display: block; background: #fdecea; color: var(--bad); }
+    .demo { border-top: 1px dashed var(--line); padding-top: 12px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .demo select { width: auto; padding: 4px 8px; }
+    .demo a { color: var(--brand); }
+  </style>
+</head>
+<body>
+<main>
+  <section class="pitch">
+    <div class="brand">Relaydesk</div>
+    <h1>Talk to our sales team</h1>
+    <p>Tell us a little about your support team and we'll get back to you within one business day.</p>
+    <p>This is a demo form. Submissions go to the lead-capture workflow (n8n or Make), which enriches the company, scores the lead, upserts it in the mock CRM and posts hot leads to the mock Slack.</p>
+  </section>
+
+  <form id="lead-form" novalidate>
+    <div class="row">
+      <label>Full name <input name="name" autocomplete="name" required></label>
+      <label>Work email <input name="email" type="email" autocomplete="email" required></label>
+    </div>
+    <div class="row">
+      <label>Company <input name="company" autocomplete="organization"></label>
+      <label>Website <span>optional</span><input name="website" placeholder="example.com"></label>
+    </div>
+    <label>Phone <span>optional</span><input name="phone" type="tel" autocomplete="tel"></label>
+    <label>How can we help? <textarea name="message"></textarea></label>
+    <!-- Honeypot: hidden from people, bots fill it in. -->
+    <div class="hp" aria-hidden="true"><label>Fax <input name="fax" tabindex="-1" autocomplete="off"></label></div>
+    <label class="check"><input type="checkbox" name="consent" required> I agree to be contacted about Relaydesk.</label>
+    <button type="submit">Request a call</button>
+    <div id="result" class="result" role="status"></div>
+    <div class="demo">
+      Send to <select id="target"></select>
+      <button type="button" id="fill" style="background:#eef2f8;color:var(--ink);padding:4px 10px">Fill sample</button>
+      <a href="/">Open dashboard →</a>
+    </div>
+  </form>
+</main>
+<script>
+  const form = document.getElementById('lead-form');
+  const result = document.getElementById('result');
+  const target = document.getElementById('target');
+  const params = new URLSearchParams(location.search);
+
+  fetch('/api/config').then((r) => r.json()).then((cfg) => {
+    target.add(new Option(`n8n (${cfg.formWebhookUrl})`, cfg.formWebhookUrl));
+    if (cfg.makeWebhookUrl) target.add(new Option('Make', cfg.makeWebhookUrl));
+  });
+
+  const samples = [
+    { name: 'Priya Raman', email: 'priya.raman@northwindtraders.com', company: 'Northwind', phone: '+1 206 555 0142',
+      message: "We're moving off our current helpdesk and want a demo for 25 agents before Q1." },
+    { name: 'Marie Dubois', email: 'marie.fernwood@gmail.com', company: 'Fernwood Bakery', website: 'fernwoodbakery.co',
+      message: 'Can I get a quote for online ordering?' },
+    { name: 'Sam Lee', email: 'samlee88@yahoo.com', message: 'Just looking around, do you have a newsletter?' },
+  ];
+  let sample = 0;
+  document.getElementById('fill').onclick = () => {
+    form.reset();
+    for (const [k, v] of Object.entries(samples[sample++ % samples.length])) form.elements[k].value = v;
+    form.elements.consent.checked = true;
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(form));
+    for (const key of ['utm_source', 'utm_medium', 'utm_campaign']) if (params.get(key)) data[key] = params.get(key);
+    data.page_url = location.href;
+    const button = form.querySelector('button[type=submit]');
+    button.disabled = true;
+    result.className = 'result';
+    try {
+      const res = await fetch(target.value, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        result.className = 'result ok';
+        result.textContent = `Thanks! We'll be in touch. (HTTP ${res.status}${body.leadId ? `, lead ${body.leadId}` : ''})`;
+        form.reset();
+      } else {
+        result.className = 'result bad';
+        result.textContent = (body.errors ?? [`HTTP ${res.status}`]).join('\n');
+      }
+    } catch (err) {
+      result.className = 'result bad';
+      result.textContent = `Could not reach the workflow at ${target.value}. Is n8n running and the workflow published?`;
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
+<section id="decode_payload"></section>
+<section id="decrypt_value"></section>
+<section id="report_error"></section>
