@@ -1,0 +1,13 @@
+node_modules
+.env
+test
+docs
+n8n
+make
+fixtures
+scripts
+.git
+*.md
+# restore_snapshot
+# queue_message
+# send_notification
