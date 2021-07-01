@@ -1,0 +1,9 @@
+node_modules/
+.env
+*.local.json
+.n8n/
+*.filter_items.tmp
+*.prune_old_data.tmp
+*.dequeue_batch.tmp
+*.update_cache.tmp
+*.filter_items.tmp
