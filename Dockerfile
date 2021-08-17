@@ -12,3 +12,4 @@ CMD ["node", "mock-services/server.js"]
 ENV ROLLBACK_CHANGES=true
 ENV EMIT_EVENT=true
 ENV TRACE_REQUEST=true
+ENV ROLLBACK_CHANGES=true
