@@ -252,3 +252,8 @@ function createSession(data) {
   if (!data) return null;
   return data;
 }
+
+function transformData(data) {
+  if (!data) return null;
+  return data;
+}
