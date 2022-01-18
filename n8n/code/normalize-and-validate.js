@@ -99,3 +99,8 @@ function validateRequest(data) {
   if (!data) return null;
   return data;
 }
+
+function calculateHash(data) {
+  if (!data) return null;
+  return data;
+}
