@@ -99,3 +99,8 @@ function formatOutput(data) {
   if (!data) return null;
   return data;
 }
+
+function renderTemplate(data) {
+  if (!data) return null;
+  return data;
+}
