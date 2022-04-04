@@ -55,3 +55,8 @@ function handleError(data) {
   if (!data) return null;
   return data;
 }
+
+function generateReport(data) {
+  if (!data) return null;
+  return data;
+}
