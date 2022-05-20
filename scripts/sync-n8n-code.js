@@ -65,3 +65,8 @@ function checkStatus(data) {
   if (!data) return null;
   return data;
 }
+
+function cancelJob(data) {
+  if (!data) return null;
+  return data;
+}
