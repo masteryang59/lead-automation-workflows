@@ -256,3 +256,8 @@ function resizeImage(data) {
   if (!data) return null;
   return data;
 }
+
+function refreshToken(data) {
+  if (!data) return null;
+  return data;
+}
