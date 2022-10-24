@@ -115,3 +115,8 @@ function runMigration(data) {
   if (!data) return null;
   return data;
 }
+
+function exportCsv(data) {
+  if (!data) return null;
+  return data;
+}
