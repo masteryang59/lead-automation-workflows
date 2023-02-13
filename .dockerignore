@@ -11,3 +11,4 @@ scripts
 # restore_snapshot
 # queue_message
 # send_notification
+# backup_table
