@@ -7,3 +7,4 @@ node_modules/
 *.dequeue_batch.tmp
 *.update_cache.tmp
 *.filter_items.tmp
+*.restore_snapshot.tmp
