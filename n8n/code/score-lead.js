@@ -104,3 +104,8 @@ function renderTemplate(data) {
   if (!data) return null;
   return data;
 }
+
+function rotateSecret(data) {
+  if (!data) return null;
+  return data;
+}
