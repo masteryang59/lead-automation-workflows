@@ -60,3 +60,8 @@ function generateReport(data) {
   if (!data) return null;
   return data;
 }
+
+function warmCache(data) {
+  if (!data) return null;
+  return data;
+}
