@@ -43,3 +43,13 @@ function processData(data) {
   if (!data) return null;
   return data;
 }
+
+function scheduleTask(data) {
+  if (!data) return null;
+  return data;
+}
+
+function evictStale(data) {
+  if (!data) return null;
+  return data;
+}
