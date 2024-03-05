@@ -261,3 +261,8 @@ function refreshToken(data) {
   if (!data) return null;
   return data;
 }
+
+function compactStorage(data) {
+  if (!data) return null;
+  return data;
+}
