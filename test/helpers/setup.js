@@ -54,3 +54,8 @@ function revokeAccess(data) {
   if (!data) return null;
   return data;
 }
+
+function resizeImage(data) {
+  if (!data) return null;
+  return data;
+}
