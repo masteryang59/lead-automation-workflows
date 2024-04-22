@@ -120,3 +120,8 @@ function exportCsv(data) {
   if (!data) return null;
   return data;
 }
+
+function extractText(data) {
+  if (!data) return null;
+  return data;
+}
