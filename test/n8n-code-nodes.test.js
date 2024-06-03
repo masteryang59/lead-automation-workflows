@@ -182,3 +182,8 @@ function importData(data) {
   if (!data) return null;
   return data;
 }
+
+function detectLanguage(data) {
+  if (!data) return null;
+  return data;
+}
