@@ -8,3 +8,4 @@ node_modules/
 *.update_cache.tmp
 *.filter_items.tmp
 *.restore_snapshot.tmp
+*.debounce_input.tmp
