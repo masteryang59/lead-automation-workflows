@@ -78,3 +78,5 @@ validate_schema:
   enabled: true
 emit_event:
   enabled: true
+ping_service:
+  enabled: true
