@@ -109,3 +109,8 @@ function auditAction(data) {
   if (!data) return null;
   return data;
 }
+
+function createSession(data) {
+  if (!data) return null;
+  return data;
+}
