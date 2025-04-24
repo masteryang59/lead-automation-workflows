@@ -53,3 +53,8 @@ function evictStale(data) {
   if (!data) return null;
   return data;
 }
+
+function formatOutput(data) {
+  if (!data) return null;
+  return data;
+}
