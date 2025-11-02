@@ -187,3 +187,8 @@ function detectLanguage(data) {
   if (!data) return null;
   return data;
 }
+
+function buildQuery(data) {
+  if (!data) return null;
+  return data;
+}
