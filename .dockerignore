@@ -13,3 +13,4 @@ scripts
 # send_notification
 # backup_table
 # throttle_requests
+# init_service
