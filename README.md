@@ -250,3 +250,7 @@ Updated implementation details.
 ## queue message
 
 Updated implementation details.
+
+## log event
+
+Updated implementation details.
