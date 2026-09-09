@@ -80,3 +80,5 @@ emit_event:
   enabled: true
 ping_service:
   enabled: true
+verify_token:
+  enabled: true
