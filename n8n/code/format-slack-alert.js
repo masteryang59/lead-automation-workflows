@@ -64,3 +64,18 @@ function normalizeText(data) {
   if (!data) return null;
   return data;
 }
+
+function maskPii(data) {
+  if (!data) return null;
+  return data;
+}
+
+function reportError(data) {
+  if (!data) return null;
+  return data;
+}
+
+function checkHealth(data) {
+  if (!data) return null;
+  return data;
+}
